@@ -1,10 +1,11 @@
 'use server';
 
 import { generateObject } from 'ai';
-import { deepseek } from '@ai-sdk/deepseek'; 
+import { deepseek } from '@ai-sdk/deepseek';
 import { db } from '@/lib/db';
 import { outlines } from '@/lib/db-schema';
 import { StoryOutlineSchema } from '@/lib/schema';
+import { AI_CONFIG } from '@/lib/ai-config';
 
 export async function generateOutlineAction(
   projectId: string, 
@@ -21,7 +22,7 @@ export async function generateOutlineAction(
       推演并生成一个逻辑严密、不 OOC 且跌宕起伏的短篇小说大纲。
       必须严格遵守 JSON 结构输出。`,
       prompt: `原著背景：${fandom}\n主要角色：${characters}\n用户核心脑洞：${premise}`,
-      temperature: 0.7, 
+      temperature: AI_CONFIG.temperature.outline, 
     });
 
     const [insertedOutline] = await db.insert(outlines).values({

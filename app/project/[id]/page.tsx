@@ -4,8 +4,25 @@ import { outlines } from "@/lib/db-schema";
 import { desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import WorkspaceClient from "./WorkspaceClient";
 import type { OutlineRecord } from "@/lib/types";
+
+interface Props {
+  params: { id: string };
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const project = await getProjectById(id);
+  if (!project) {
+    return { title: "项目未找到" };
+  }
+  return {
+    title: project.title,
+    description: `《${project.title}》— 原著：${project.fandom}，核心脑洞：${project.premise.slice(0, 80)}`,
+  };
+}
 
 export default async function ProjectWorkspacePage({ params }: { params: { id: string } }) {
   const { id } = await params;

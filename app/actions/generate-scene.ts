@@ -2,6 +2,7 @@
 
 import { generateText } from 'ai';
 import { deepseek } from '@ai-sdk/deepseek';
+import { AI_CONFIG } from '@/lib/ai-config';
 
 export async function generateSceneDraftAction(
   fandom: string,
@@ -41,7 +42,7 @@ export async function generateSceneDraftAction(
 
         请开始撰写该场景的小说正文：
       `,
-      temperature: 0.8,
+      temperature: AI_CONFIG.temperature.scene,
     });
 
     return { success: true, text };

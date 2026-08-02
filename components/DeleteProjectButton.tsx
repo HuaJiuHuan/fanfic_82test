@@ -30,11 +30,13 @@ export default function DeleteProjectButton({ projectId, projectName }: { projec
   };
 
   return (
-    <button 
+    <button
       onClick={handleDelete}
       disabled={isDeleting}
-      className="text-xs text-academia-muted hover:text-academia-crimson transition-colors p-1.5 rounded-md border border-transparent hover:border-academia-crimson/30 hover:bg-academia-crimson/10"
-      title="销毁此项目"
+      aria-disabled={isDeleting}
+      aria-label={`删除项目：${projectName}`}
+      className="absolute top-3 right-3 text-xs text-academia-muted hover:text-academia-crimson transition-colors p-1.5 rounded-md border border-transparent hover:border-academia-crimson/30 hover:bg-academia-crimson/10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+      title={`删除项目：${projectName}`}
     >
       {isDeleting ? '...' : '🗑️'}
     </button>

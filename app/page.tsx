@@ -1,5 +1,12 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getProjects } from "@/app/actions/project";
+import DeleteProjectButton from "@/components/DeleteProjectButton";
+
+export const metadata: Metadata = {
+  title: "我的灵感档案室",
+  description: "所有世界线在此收束。管理你的同人小说项目，开始新的创作之旅。",
+};
 
 export default async function DashboardPage() {
   const projectList = await getProjects();
@@ -7,8 +14,14 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-academia-bg text-academia-parchment font-sans selection:bg-academia-gold/20">
       <header className="w-full px-6 py-4 border-b border-academia-border bg-academia-bg/80 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center">
-        <span className="text-xl font-serif font-bold tracking-widest text-academia-gold">FANFIC COPILOT</span>
-        <Link href="/project/new" className="bg-academia-gold text-academia-bg px-4 py-2 rounded-lg text-sm font-bold tracking-wide hover:opacity-90 transition-all shadow-[0_0_15px_rgba(193,156,92,0.15)]">
+        <span className="text-xl font-serif font-bold tracking-widest text-academia-gold">
+          FANFIC COPILOT
+        </span>
+        <Link
+          href="/project/new"
+          className="bg-academia-gold text-academia-bg px-4 py-2 rounded-lg text-sm font-bold tracking-wide hover:opacity-90 transition-all shadow-[0_0_15px_rgba(193,156,92,0.15)]"
+          aria-label="创建新的同人小说项目"
+        >
           + 开新坑
         </Link>
       </header>
@@ -20,21 +33,46 @@ export default async function DashboardPage() {
         </div>
 
         {projectList.length === 0 ? (
-          <div className="w-full py-20 flex flex-col items-center justify-center border border-dashed border-academia-border rounded-xl text-academia-muted">
-             <span className="text-4xl mb-4 opacity-50">📂</span>
-             <p>这里空空如也，去创造你的第一个宇宙吧。</p>
+          <div
+            className="w-full py-20 flex flex-col items-center justify-center border border-dashed border-academia-border rounded-xl text-academia-muted"
+            role="status"
+            aria-label="暂无项目"
+          >
+            <span className="text-4xl mb-4 opacity-50" aria-hidden="true">📂</span>
+            <p>这里空空如也，去创造你的第一个宇宙吧。</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projectList.map((proj) => (
-              <Link href={`/project/${proj.id}`} key={proj.id} className="relative group bg-academia-surface border border-academia-border rounded-xl hover:border-academia-gold/50 transition-all p-6 block">
-                <h3 className="text-lg font-serif font-bold text-academia-gold mb-2 group-hover:text-academia-parchment transition-colors">{proj.title}</h3>
-                <div className="text-xs text-academia-muted space-y-1">
-                  <p><span className="text-academia-gold/50">原著：</span>{proj.fandom}</p>
-                  <p><span className="text-academia-gold/50">角色：</span>{proj.characters}</p>
-                  <p className="pt-2 mt-2 border-t border-academia-border/50 line-clamp-2 leading-relaxed">{proj.premise}</p>
-                </div>
-              </Link>
+              <div
+                key={proj.id}
+                className="relative group bg-academia-surface border border-academia-border rounded-xl hover:border-academia-gold/50 transition-all"
+              >
+                <Link
+                  href={`/project/${proj.id}`}
+                  aria-label={`打开项目：${proj.title}`}
+                  className="block p-6"
+                >
+                  <h3 className="text-lg font-serif font-bold text-academia-gold mb-2 group-hover:text-academia-parchment transition-colors">
+                    {proj.title}
+                  </h3>
+                  <div className="text-xs text-academia-muted space-y-1">
+                    <p>
+                      <span className="text-academia-gold/50">原著：</span>
+                      {proj.fandom}
+                    </p>
+                    <p>
+                      <span className="text-academia-gold/50">角色：</span>
+                      {proj.characters}
+                    </p>
+                    <p className="pt-2 mt-2 border-t border-academia-border/50 line-clamp-2 leading-relaxed">
+                      {proj.premise}
+                    </p>
+                  </div>
+                </Link>
+
+                <DeleteProjectButton projectId={proj.id} projectName={proj.title} />
+              </div>
             ))}
           </div>
         )}
