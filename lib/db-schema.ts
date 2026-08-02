@@ -1,0 +1,39 @@
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+
+// 核心实体：项目 (Project) - 也就是你的“坑”
+export const projects = sqliteTable('projects', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  title: text('title').notNull(),           // 项目代号/书名
+  fandom: text('fandom').notNull(),         // 原著背景 (全局)
+  characters: text('characters').notNull(), // 核心角色 (全局)
+  premise: text('premise').notNull(),       // 核心脑洞 (全局)
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
+
+// 从属实体：大纲 (Outline) - 依附于项目，一个项目可以有多版大纲
+export const outlines = sqliteTable('outlines', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }), // 级联删除
+  content: text('content', { mode: 'json' }).notNull(), // 存放 AI 吐出的结构化 JSON
+  version: integer('version').default(1),               // 大纲版本号
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
+
+export const sceneDrafts = sqliteTable('scene_drafts', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  outlineId: text('outline_id')
+    .notNull()
+    .references(() => outlines.id, { onDelete: 'cascade' }),
+  sceneId: text('scene_id').notNull(), // 对应刚才 Zod 里生成的场景 ID
+  content: text('content').notNull(),
+  wordCount: integer('word_count').default(0),
+  isLocked: integer('is_locked', { mode: 'boolean' }).default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
