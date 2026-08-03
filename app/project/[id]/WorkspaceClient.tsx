@@ -8,6 +8,7 @@ import { generateSceneDraftAction } from "@/app/actions/generate-scene";
 import type { OutlineRecord, Project, StoryOutline, Scene } from "@/lib/types";
 import OutlineView from "./OutlineView";
 import WritingView from "./WritingView";
+import ReadingView from "./ReadingView";
 
 // ==================== 类型定义 ====================
 
@@ -24,10 +25,15 @@ interface WorkspaceState {
   isEditing: boolean;
   editedOutline: StoryOutline | null;
   isWritingMode: boolean;
+  isReadingView: boolean;
   activeSceneId: string | null;
   draftsMap: Record<string, string>;
   isSavingDraft: boolean;
   isGeneratingScene: boolean;
+  sceneWordCount: number;
+  sceneStyle: string;
+  sceneCustomNote: string;
+  confirmingDelete: boolean;
 }
 
 type WorkspaceAction =
@@ -42,35 +48,47 @@ type WorkspaceAction =
   | { type: "SAVE_EDITING"; payload: OutlineRecord }
   | { type: "ENTER_WRITING_MODE"; payload: { draftsMap: Record<string, string>; activeSceneId: string } }
   | { type: "EXIT_WRITING_MODE" }
+  | { type: "ENTER_READING_VIEW" }
+  | { type: "EXIT_READING_VIEW" }
   | { type: "SET_ACTIVE_SCENE"; payload: string }
   | { type: "UPDATE_DRAFT"; payload: { sceneId: string; content: string } }
   | { type: "SET_SAVING_DRAFT"; payload: boolean }
-  | { type: "SET_GENERATING_SCENE"; payload: boolean };
+  | { type: "SET_GENERATING_SCENE"; payload: boolean }
+  | { type: "SET_SCENE_WORD_COUNT"; payload: number }
+  | { type: "SET_SCENE_STYLE"; payload: string }
+  | { type: "SET_SCENE_CUSTOM_NOTE"; payload: string }
+  | { type: "ADD_ACT" }
+  | { type: "REMOVE_ACT"; payload: number }
+  | { type: "ADD_SCENE"; payload: number }
+  | { type: "REMOVE_SCENE"; payload: { actIdx: number; sceneIdx: number } }
+  | { type: "TOGGLE_DELETE_CONFIRM" };
 
 // ==================== Reducer ====================
 
 function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
     case "SET_LOADING":
-      return { ...state, isLoading: action.payload };
+      return { ...state, isLoading: action.payload, confirmingDelete: false };
     case "SET_ERROR":
-      return { ...state, error: action.payload };
+      return { ...state, error: action.payload, confirmingDelete: false };
     case "ADD_TO_HISTORY":
-      return { ...state, history: [action.payload, ...state.history], selectedIndex: 0 };
+      return { ...state, history: [action.payload, ...state.history], selectedIndex: 0, confirmingDelete: false };
     case "REMOVE_FROM_HISTORY":
       return {
         ...state,
         history: state.history.filter((_, i) => i !== action.payload),
         selectedIndex: 0,
         isEditing: false,
+        confirmingDelete: false,
       };
     case "SET_SELECTED_INDEX":
-      return { ...state, selectedIndex: action.payload };
+      return { ...state, selectedIndex: action.payload, confirmingDelete: false };
     case "START_EDITING": {
       const current = state.history[state.selectedIndex];
       return {
         ...state,
         isEditing: true,
+        confirmingDelete: false,
         editedOutline: current ? structuredClone(current.content) : null,
       };
     }
@@ -92,6 +110,10 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       };
     case "EXIT_WRITING_MODE":
       return { ...state, isWritingMode: false };
+    case "ENTER_READING_VIEW":
+      return { ...state, isReadingView: true };
+    case "EXIT_READING_VIEW":
+      return { ...state, isReadingView: false };
     case "SET_ACTIVE_SCENE":
       return { ...state, activeSceneId: action.payload };
     case "UPDATE_DRAFT":
@@ -103,6 +125,76 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       return { ...state, isSavingDraft: action.payload };
     case "SET_GENERATING_SCENE":
       return { ...state, isGeneratingScene: action.payload };
+    case "SET_SCENE_WORD_COUNT":
+      return { ...state, sceneWordCount: action.payload };
+    case "SET_SCENE_STYLE":
+      return { ...state, sceneStyle: action.payload };
+    case "SET_SCENE_CUSTOM_NOTE":
+      return { ...state, sceneCustomNote: action.payload };
+    case "ADD_ACT": {
+      if (!state.editedOutline) return state;
+      const newAct = {
+        actTitle: "新幕",
+        scenes: [{
+          id: crypto.randomUUID(),
+          sceneNumber: 1,
+          location: "",
+          plotAction: "",
+          conflict: "",
+          emotionalShift: "",
+        }],
+      };
+      return {
+        ...state,
+        editedOutline: {
+          ...state.editedOutline,
+          acts: [...state.editedOutline.acts, newAct],
+        },
+      };
+    }
+    case "REMOVE_ACT": {
+      if (!state.editedOutline) return state;
+      const newActs = state.editedOutline.acts.filter((_, i) => i !== action.payload);
+      return {
+        ...state,
+        editedOutline: { ...state.editedOutline, acts: newActs },
+      };
+    }
+    case "ADD_SCENE": {
+      if (!state.editedOutline) return state;
+      const actIdx = action.payload;
+      const act = state.editedOutline.acts[actIdx];
+      if (!act) return state;
+      const newScene = {
+        id: crypto.randomUUID(),
+        sceneNumber: act.scenes.length + 1,
+        location: "",
+        plotAction: "",
+        conflict: "",
+        emotionalShift: "",
+      };
+      const newActs = [...state.editedOutline.acts];
+      newActs[actIdx] = { ...act, scenes: [...act.scenes, newScene] };
+      return {
+        ...state,
+        editedOutline: { ...state.editedOutline, acts: newActs },
+      };
+    }
+    case "REMOVE_SCENE": {
+      if (!state.editedOutline) return state;
+      const { actIdx, sceneIdx } = action.payload;
+      const act = state.editedOutline.acts[actIdx];
+      if (!act || act.scenes.length <= 1) return state;
+      const newScenes = act.scenes.filter((_, i) => i !== sceneIdx);
+      const newActs = [...state.editedOutline.acts];
+      newActs[actIdx] = { ...act, scenes: newScenes };
+      return {
+        ...state,
+        editedOutline: { ...state.editedOutline, acts: newActs },
+      };
+    }
+    case "TOGGLE_DELETE_CONFIRM":
+      return { ...state, confirmingDelete: !state.confirmingDelete };
     default:
       return state;
   }
@@ -119,10 +211,15 @@ function createInitialState(initialHistory: OutlineRecord[]): WorkspaceState {
     isEditing: false,
     editedOutline: null,
     isWritingMode: false,
+    isReadingView: false,
     activeSceneId: null,
     draftsMap: {},
     isSavingDraft: false,
     isGeneratingScene: false,
+    sceneWordCount: 1000,
+    sceneStyle: "",
+    sceneCustomNote: "",
+    confirmingDelete: false,
   };
 }
 
@@ -174,8 +271,8 @@ export default function WorkspaceClient({ project, initialHistory }: WorkspaceCl
 
   const handleDelete = useCallback(async () => {
     if (!currentRecord) return;
-    if (!confirm("确定要彻底销毁这个时间线分支吗？")) return;
     dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "TOGGLE_DELETE_CONFIRM" });
     try {
       const res = await deleteOutlineAction(currentRecord.id, project.id);
       if (res.success) {
@@ -309,6 +406,23 @@ export default function WorkspaceClient({ project, initialHistory }: WorkspaceCl
     }
   }, [project.id, currentRecord, state.activeSceneId, state.draftsMap]);
 
+  const handleSaveAllDrafts = useCallback(async () => {
+    if (!currentRecord) return;
+    dispatch({ type: "SET_SAVING_DRAFT", payload: true });
+    try {
+      const entries = Object.entries(state.draftsMap).filter(([, content]) => content);
+      await Promise.all(
+        entries.map(([sceneId, content]) =>
+          saveDraftAction(project.id, currentRecord.id, sceneId, content)
+        )
+      );
+    } catch {
+      dispatch({ type: "SET_ERROR", payload: "保存正文失败" });
+    } finally {
+      dispatch({ type: "SET_SAVING_DRAFT", payload: false });
+    }
+  }, [project.id, currentRecord, state.draftsMap]);
+
   const handleGenerateScene = useCallback(async () => {
     if (!activeSceneInfo || !state.activeSceneId || !currentRecord) return;
     dispatch({ type: "SET_GENERATING_SCENE", payload: true });
@@ -319,6 +433,9 @@ export default function WorkspaceClient({ project, initialHistory }: WorkspaceCl
         plotAction: activeSceneInfo.plotAction,
         conflict: activeSceneInfo.conflict,
         emotionalShift: activeSceneInfo.emotionalShift,
+        wordCount: state.sceneWordCount || undefined,
+        style: state.sceneStyle || undefined,
+        customNote: state.sceneCustomNote || undefined,
       });
       if (res.success && res.text) {
         dispatch({
@@ -333,9 +450,59 @@ export default function WorkspaceClient({ project, initialHistory }: WorkspaceCl
     } finally {
       dispatch({ type: "SET_GENERATING_SCENE", payload: false });
     }
-  }, [project, currentRecord, activeSceneInfo, state.activeSceneId]);
+  }, [project, currentRecord, activeSceneInfo, state.activeSceneId, state.sceneWordCount, state.sceneStyle, state.sceneCustomNote]);
+
+  const handleSceneWordCountChange = useCallback((count: number) => {
+    dispatch({ type: "SET_SCENE_WORD_COUNT", payload: count });
+  }, []);
+
+  const handleSceneStyleChange = useCallback((style: string) => {
+    dispatch({ type: "SET_SCENE_STYLE", payload: style });
+  }, []);
+
+  const handleSceneCustomNoteChange = useCallback((note: string) => {
+    dispatch({ type: "SET_SCENE_CUSTOM_NOTE", payload: note });
+  }, []);
+
+  const handleAddAct = useCallback(() => {
+    dispatch({ type: "ADD_ACT" });
+  }, []);
+
+  const handleRemoveAct = useCallback((actIdx: number) => {
+    dispatch({ type: "REMOVE_ACT", payload: actIdx });
+  }, []);
+
+  const handleAddScene = useCallback((actIdx: number) => {
+    dispatch({ type: "ADD_SCENE", payload: actIdx });
+  }, []);
+
+  const handleRemoveScene = useCallback((actIdx: number, sceneIdx: number) => {
+    dispatch({ type: "REMOVE_SCENE", payload: { actIdx, sceneIdx } });
+  }, []);
+
+  const handleToggleDeleteConfirm = useCallback(() => {
+    dispatch({ type: "TOGGLE_DELETE_CONFIRM" });
+  }, []);
+
+  const handleEnterReadingView = useCallback(() => {
+    dispatch({ type: "ENTER_READING_VIEW" });
+  }, []);
+
+  const handleExitReadingView = useCallback(() => {
+    dispatch({ type: "EXIT_READING_VIEW" });
+  }, []);
 
   // ==================== 渲染 ====================
+
+  if (state.isReadingView && currentOutline) {
+    return (
+      <ReadingView
+        outline={currentOutline}
+        draftsMap={state.draftsMap}
+        onBackToWriting={handleExitReadingView}
+      />
+    );
+  }
 
   if (state.isWritingMode && currentOutline) {
     return (
@@ -350,8 +517,16 @@ export default function WorkspaceClient({ project, initialHistory }: WorkspaceCl
         onSelectScene={handleSelectScene}
         onDraftChange={handleDraftChange}
         onSaveDraft={handleSaveDraft}
+        onSaveAllDrafts={handleSaveAllDrafts}
         onGenerateScene={handleGenerateScene}
         onExitWritingMode={handleExitWritingMode}
+        onEnterReadingView={handleEnterReadingView}
+        sceneWordCount={state.sceneWordCount}
+        sceneStyle={state.sceneStyle}
+        sceneCustomNote={state.sceneCustomNote}
+        onSceneWordCountChange={handleSceneWordCountChange}
+        onSceneStyleChange={handleSceneStyleChange}
+        onSceneCustomNoteChange={handleSceneCustomNoteChange}
       />
     );
   }
@@ -369,10 +544,16 @@ export default function WorkspaceClient({ project, initialHistory }: WorkspaceCl
       onSelectVersion={(index) => dispatch({ type: "SET_SELECTED_INDEX", payload: index })}
       onGenerate={handleGenerate}
       onDelete={handleDelete}
+      onToggleDeleteConfirm={handleToggleDeleteConfirm}
+      confirmingDelete={state.confirmingDelete}
       onStartEditing={handleStartEditing}
       onCancelEditing={handleCancelEditing}
       onSaveEditing={handleSaveEditing}
       onEnterWritingMode={handleEnterWritingMode}
+      onAddAct={handleAddAct}
+      onRemoveAct={handleRemoveAct}
+      onAddScene={handleAddScene}
+      onRemoveScene={handleRemoveScene}
       onUpdateTitle={handleUpdateTitle}
       onUpdateLogline={handleUpdateLogline}
       onUpdateActTitle={handleUpdateActTitle}

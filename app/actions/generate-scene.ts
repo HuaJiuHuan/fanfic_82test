@@ -14,9 +14,22 @@ export async function generateSceneDraftAction(
     plotAction: string;
     conflict: string;
     emotionalShift: string;
+    wordCount?: number;
+    style?: string;
+    customNote?: string;
   }
 ) {
   try {
+    const wordCountHint = sceneInfo.wordCount
+      ? `【字数要求】：请将正文控制在约 ${sceneInfo.wordCount} 字左右。`
+      : "";
+    const styleHint = sceneInfo.style
+      ? `【写作风格】：请严格采用「${sceneInfo.style}」的风格进行写作。`
+      : "";
+    const customNote = sceneInfo.customNote
+      ? `【特殊要求】：${sceneInfo.customNote}`
+      : "";
+
     const { text } = await generateText({
       model: deepseek('deepseek-chat'),
       system: `你是一位深谙叙事节奏与人物心理描写的同人小说家。
@@ -39,6 +52,9 @@ export async function generateSceneDraftAction(
         核心动作：${sceneInfo.plotAction}
         主要冲突：${sceneInfo.conflict}
         情感转变：${sceneInfo.emotionalShift}
+        ${wordCountHint}
+        ${styleHint}
+        ${customNote}
 
         请开始撰写该场景的小说正文：
       `,

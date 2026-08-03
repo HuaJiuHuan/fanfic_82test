@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useEffect, useCallback } from "react";
 import type { Scene, StoryOutline } from "@/lib/types";
 
 interface WritingViewProps {
@@ -13,8 +14,16 @@ interface WritingViewProps {
   onSelectScene: (sceneId: string) => void;
   onDraftChange: (content: string) => void;
   onSaveDraft: () => void;
+  onSaveAllDrafts: () => void;
   onGenerateScene: () => void;
   onExitWritingMode: () => void;
+  onEnterReadingView: () => void;
+  sceneWordCount: number;
+  sceneStyle: string;
+  sceneCustomNote: string;
+  onSceneWordCountChange: (count: number) => void;
+  onSceneStyleChange: (style: string) => void;
+  onSceneCustomNoteChange: (note: string) => void;
 }
 
 export default function WritingView({
@@ -28,9 +37,41 @@ export default function WritingView({
   onSelectScene,
   onDraftChange,
   onSaveDraft,
+  onSaveAllDrafts,
   onGenerateScene,
   onExitWritingMode,
+  onEnterReadingView,
+  sceneWordCount,
+  sceneStyle,
+  sceneCustomNote,
+  onSceneWordCountChange,
+  onSceneStyleChange,
+  onSceneCustomNoteChange,
 }: WritingViewProps) {
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentContent = draftsMap[activeSceneId || ""] || "";
+
+  const clearAutoSaveTimer = useCallback(() => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    clearAutoSaveTimer();
+    if (currentContent) {
+      autoSaveTimerRef.current = setTimeout(() => {
+        onSaveDraft();
+      }, 30_000);
+    }
+    return clearAutoSaveTimer;
+  }, [currentContent, activeSceneId, clearAutoSaveTimer, onSaveDraft]);
+
+  useEffect(() => {
+    return () => clearAutoSaveTimer();
+  }, [clearAutoSaveTimer]);
+
   return (
     <div className="w-full h-full flex flex-col space-y-4 animate-fade-in-up">
       {error && (
@@ -46,13 +87,21 @@ export default function WritingView({
         </div>
         <div className="flex items-center gap-4">
           <span className="text-xs text-academia-muted">
-            {isSavingDraft ? "保存中..." : "已同步至命运石之门"}
+            {isSavingDraft ? "保存中..." : "30 秒无操作自动保存"}
           </span>
           <button
-            onClick={onSaveDraft}
+            onClick={onSaveAllDrafts}
+            disabled={isSavingDraft}
             className="text-xs bg-academia-surface border border-academia-border text-academia-parchment px-3 py-1.5 rounded hover:border-academia-gold transition-all"
           >
-            手动保存当前幕
+            保存全部正文
+          </button>
+          <button
+            onClick={onEnterReadingView}
+            className="text-xs bg-academia-gold/10 text-academia-gold border border-academia-gold/30 px-3 py-1.5 rounded hover:bg-academia-gold hover:text-academia-bg transition-all"
+            aria-label="预览全文阅读模式"
+          >
+            预览全文
           </button>
           <button
             onClick={onExitWritingMode}
@@ -118,6 +167,61 @@ export default function WritingView({
                 <p className="text-xs text-academia-muted border-t border-academia-border/50 pt-2">
                   ⚔️ 冲突：{activeSceneInfo.conflict}
                 </p>
+              </div>
+
+              <div className="bg-academia-surface/50 border border-academia-border rounded-lg p-3 space-y-3">
+                <p className="text-[10px] uppercase tracking-widest text-academia-muted">AI 执笔参数</p>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label htmlFor="scene-word-count" className="text-[10px] text-academia-muted block mb-1">
+                      指定字数
+                    </label>
+                    <input
+                      id="scene-word-count"
+                      type="number"
+                      min={200}
+                      max={5000}
+                      step={100}
+                      value={sceneWordCount}
+                      onChange={(e) => onSceneWordCountChange(Number(e.target.value))}
+                      className="w-full bg-academia-bg border border-academia-border rounded px-2 py-1.5 text-xs text-academia-parchment outline-none focus:border-academia-gold/50 transition-colors"
+                      aria-label="指定 AI 生成字数"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label htmlFor="scene-style" className="text-[10px] text-academia-muted block mb-1">
+                      写作风格
+                    </label>
+                    <select
+                      id="scene-style"
+                      value={sceneStyle}
+                      onChange={(e) => onSceneStyleChange(e.target.value)}
+                      className="w-full bg-academia-bg border border-academia-border rounded px-2 py-1.5 text-xs text-academia-parchment outline-none focus:border-academia-gold/50 transition-colors"
+                      aria-label="选择 AI 写作风格"
+                    >
+                      <option value="">默认</option>
+                      <option value="细腻描写">细腻描写</option>
+                      <option value="快节奏叙述">快节奏叙述</option>
+                      <option value="对话为主">对话为主</option>
+                      <option value="心理独白">心理独白</option>
+                      <option value="环境渲染">环境渲染</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="scene-custom-note" className="text-[10px] text-academia-muted block mb-1">
+                    特殊要求 <span className="text-academia-border">（可选）</span>
+                  </label>
+                  <textarea
+                    id="scene-custom-note"
+                    value={sceneCustomNote}
+                    onChange={(e) => onSceneCustomNoteChange(e.target.value)}
+                    placeholder="如：让爽世在对话中偷偷流泪但不说破..."
+                    rows={2}
+                    className="w-full bg-academia-bg border border-academia-border rounded px-2 py-1.5 text-xs text-academia-parchment outline-none focus:border-academia-gold/50 transition-colors resize-none"
+                    aria-label="AI 执笔特殊要求"
+                  />
+                </div>
               </div>
 
               <div className="flex-1 flex flex-col relative">
