@@ -1,6 +1,7 @@
 "use client";
 
 import type { OutlineRecord, Project, StoryOutline } from "@/lib/types";
+import OutlineSwitcher from "./OutlineSwitcher";
 
 interface OutlineViewProps {
   project: Project;
@@ -31,6 +32,7 @@ interface OutlineViewProps {
 }
 
 export default function OutlineView({
+  project,
   isLoading,
   error,
   history,
@@ -67,20 +69,13 @@ export default function OutlineView({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-academia-border pb-4 shrink-0">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-serif text-academia-parchment">大纲推演台</h2>
-          {history.length > 0 && !isEditing && (
-            <select
-              value={selectedIndex}
-              onChange={(e) => onSelectVersion(Number(e.target.value))}
-              disabled={isLoading}
-              className="bg-academia-surface border border-academia-border text-xs text-academia-muted rounded-md px-2 py-1 outline-none focus:border-academia-gold/50 cursor-pointer"
-              aria-label="选择大纲版本"
-            >
-              {Array.from({ length: history.length }).map((_, idx) => (
-                <option key={idx} value={idx}>
-                  版本 {history.length - idx}
-                </option>
-              ))}
-            </select>
+          {history.length > 1 && !isEditing && (
+            <OutlineSwitcher
+              projectId={project.id}
+              activeOutlineId={history[selectedIndex]?.id ?? null}
+              outlines={history}
+              onSelectVersion={onSelectVersion}
+            />
           )}
         </div>
 
@@ -239,7 +234,7 @@ export default function OutlineView({
                       {act.scenes.map((scene, sceneIdx) => (
                         <div
                           key={scene.id || sceneIdx}
-                          className={`border p-4 rounded-lg space-y-3 group/scene ${isEditing ? "bg-academia-surface/50 border-academia-gold/30" : "bg-[#1a1a18] border-academia-border"}`}
+                          className={`border p-4 rounded-lg space-y-3 group/scene ${isEditing ? "bg-academia-surface/50 border-academia-gold/30" : "bg-academia-surface border-academia-border"}`}
                         >
                           <div className="flex items-center justify-between">
                             <div className="text-academia-gold font-bold text-xs">

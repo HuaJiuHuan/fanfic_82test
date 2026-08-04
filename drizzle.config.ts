@@ -2,7 +2,7 @@ import { defineConfig } from 'drizzle-kit';
 import { config } from 'dotenv';
 
 // 1. 明确告诉 Drizzle CLI 去读取 Next.js 专属的 .env.local 文件
-config({ path: '.env.local' });
+config({ path: 'D:/react-env/.env.local' });
 
 export default defineConfig({
   schema: './lib/db-schema.ts',

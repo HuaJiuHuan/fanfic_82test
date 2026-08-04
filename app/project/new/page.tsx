@@ -40,7 +40,7 @@ export default function NewProjectPage() {
           </Link>
         </div>
 
-        <div className="bg-[#1a1a18] border border-academia-border rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-academia-surface border border-academia-border rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-xs text-academia-muted">
             <span className="text-academia-gold font-bold mb-1 block">✨ 灵感速写 (Quick Start)</span>
             懒得打字？点击右侧一键载入测试数据。
@@ -122,7 +122,7 @@ export default function NewProjectPage() {
 
           <button
             type="submit"
-            className="w-full bg-academia-gold text-academia-bg py-3 rounded-lg text-sm font-bold tracking-wide hover:opacity-90 active:scale-[0.98] transition-all shadow-[0_0_15px_rgba(193,156,92,0.15)] mt-4"
+            className="w-full bg-academia-gold text-academia-bg py-3 rounded-lg text-sm font-bold tracking-wide hover:opacity-90 active:scale-[0.98] transition-all shadow-[0_0_15px_rgba(232,125,155,0.15)] mt-4"
             aria-label="创建项目并进入沙盒"
           >
             开坑并进入沙盒

@@ -7,6 +7,7 @@ export const projects = sqliteTable('projects', {
   fandom: text('fandom').notNull(),         // 原著背景 (全局)
   characters: text('characters').notNull(), // 核心角色 (全局)
   premise: text('premise').notNull(),       // 核心脑洞 (全局)
+  activeOutlineId: text('active_outline_id'), // 当前选定的大纲版本
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });

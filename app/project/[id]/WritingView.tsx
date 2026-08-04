@@ -10,12 +10,14 @@ interface WritingViewProps {
   draftsMap: Record<string, string>;
   isSavingDraft: boolean;
   isGeneratingScene: boolean;
+  isTyping: boolean;
   activeSceneInfo: Scene | null;
   onSelectScene: (sceneId: string) => void;
   onDraftChange: (content: string) => void;
   onSaveDraft: () => void;
   onSaveAllDrafts: () => void;
   onGenerateScene: () => void;
+  onStopTyping: () => void;
   onExitWritingMode: () => void;
   onEnterReadingView: () => void;
   sceneWordCount: number;
@@ -33,12 +35,14 @@ export default function WritingView({
   draftsMap,
   isSavingDraft,
   isGeneratingScene,
+  isTyping,
   activeSceneInfo,
   onSelectScene,
   onDraftChange,
   onSaveDraft,
   onSaveAllDrafts,
   onGenerateScene,
+  onStopTyping,
   onExitWritingMode,
   onEnterReadingView,
   sceneWordCount,
@@ -126,7 +130,7 @@ export default function WritingView({
                     onClick={() => onSelectScene(scene.id)}
                     className={`w-full text-left p-3 rounded-lg border transition-all text-xs space-y-1 ${
                       activeSceneId === scene.id
-                        ? "bg-academia-surface border-academia-gold shadow-[0_0_10px_rgba(193,156,92,0.15)]"
+                        ? "bg-academia-surface border-academia-gold shadow-[0_0_10px_rgba(232,125,155,0.15)]"
                         : "bg-transparent border-transparent hover:border-academia-border hover:bg-academia-surface/50"
                     }`}
                     aria-label={`场景 ${scene.sceneNumber}：${scene.plotAction}`}
@@ -153,7 +157,7 @@ export default function WritingView({
         <div className="w-2/3 flex flex-col space-y-4">
           {activeSceneInfo ? (
             <>
-              <div className="bg-[#1a1a18] border border-academia-border p-4 rounded-lg space-y-2 relative overflow-hidden">
+              <div className="bg-academia-surface border border-academia-border p-4 rounded-lg space-y-2 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-academia-gold/50"></div>
                 <div className="flex justify-between">
                   <span className="text-xs font-bold text-academia-gold">
@@ -230,20 +234,30 @@ export default function WritingView({
                   onChange={(e) => onDraftChange(e.target.value)}
                   onBlur={onSaveDraft}
                   placeholder="开始执笔，或者召唤 AI 辅助撰写本段场景..."
-                  className="w-full h-full resize-none bg-academia-bg border border-academia-border rounded-lg p-6 text-sm text-academia-parchment leading-loose outline-none focus:border-academia-gold/50 transition-colors custom-scrollbar"
+                  className={`w-full h-full resize-none bg-academia-bg border rounded-lg p-6 text-sm text-academia-parchment leading-loose outline-none focus:border-academia-gold/50 transition-colors custom-scrollbar ${
+                    isTyping ? "border-academia-gold/50" : "border-academia-border"
+                  }`}
                   aria-label={`场景 ${activeSceneInfo.sceneNumber} 正文编辑区`}
                 />
+                {isTyping && (
+                  <div className="absolute bottom-4 left-6 flex items-center gap-2">
+                    <span className="text-[10px] text-academia-muted animate-pulse">AI 正在打字机输出...</span>
+                    <span className="w-2 h-4 bg-academia-gold animate-blink cursor-text"></span>
+                  </div>
+                )}
                 <button
-                  onClick={onGenerateScene}
+                  onClick={isTyping ? onStopTyping : onGenerateScene}
                   disabled={isGeneratingScene}
-                  className={`absolute bottom-4 right-6 px-4 py-2 rounded-md text-xs font-bold shadow-[0_0_15px_rgba(193,156,92,0.3)] transition-all ${
+                  className={`absolute bottom-4 right-6 px-4 py-2 rounded-md text-xs font-bold shadow-[0_0_15px_rgba(232,125,155,0.3)] transition-all ${
                     isGeneratingScene
                       ? "bg-academia-surface text-academia-muted cursor-not-allowed border border-academia-border"
-                      : "bg-academia-gold text-academia-bg hover:opacity-90"
+                      : isTyping
+                        ? "bg-academia-surface text-academia-muted border border-academia-border hover:bg-academia-crimson/10 hover:text-academia-crimson hover:border-academia-crimson/30"
+                        : "bg-academia-gold text-academia-bg hover:opacity-90"
                   }`}
-                  aria-label="召唤 AI 执笔此场景"
+                  aria-label={isTyping ? "停止打字" : "召唤 AI 执笔此场景"}
                 >
-                  {isGeneratingScene ? "✨ 蘸墨构思中..." : "✨ 召唤 AI 执笔此场景"}
+                  {isGeneratingScene ? "✨ 蘸墨构思中..." : isTyping ? "⏹ 停止打字" : "✨ 召唤 AI 执笔此场景"}
                 </button>
               </div>
             </>

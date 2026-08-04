@@ -3,18 +3,19 @@
 
 /* 2. v4 专属的主题配置块 */
 @theme {
-  /* 定义暗黑学院专属调色板 */
-  --color-academia-bg: #161614;
-  --color-academia-surface: #232321;
-  --color-academia-border: #3a3935;
-  --color-academia-parchment: #e8e4d9;
-  --color-academia-gold: #c19c5c;
-  --color-academia-crimson: #722f2f;
-  --color-academia-muted: #8c8b88;
+  /* 日系轻小说风调色板 —— 暖白漫画纸 + 樱花粉点缀 */
+  --color-academia-bg: #faf7f2;
+  --color-academia-surface: #ffffff;
+  --color-academia-border: #e8e0d5;
+  --color-academia-parchment: #2d2a28;
+  --color-academia-gold: #e87d9b;
+  --color-academia-crimson: #d4686c;
+  --color-academia-muted: #a09890;
 
   /* 定义动画 */
   --animate-breathe: breathe 3s ease-in-out infinite;
   --animate-fade-in-up: fade-in-up 0.7s ease-out forwards;
+  --animate-blink: blink 1s step-end infinite;
   
   /* 定义关键帧 */
   @keyframes breathe {
@@ -24,6 +25,10 @@
   @keyframes fade-in-up {
     0% { opacity: 0; transform: translateY(12px); }
     100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
   }
   @keyframes shimmer {
     100% { transform: translateX(100%); }
@@ -39,19 +44,19 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* 优雅的深色滚动条 */
+  /* 浅色滚动条 —— 适配暖白背景 */
   ::-webkit-scrollbar {
     width: 6px;
   }
   ::-webkit-scrollbar-track {
-    background-color: var(--color-academia-bg);
+    background-color: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background-color: var(--color-academia-border);
+    background-color: #d4c8ba;
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-academia-muted);
+    background-color: var(--color-academia-gold);
   }
 }
 
@@ -69,10 +74,10 @@
     transform: translateX(-100%);
     background-image: linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0) 0,
-      rgba(232, 228, 217, 0.04) 20%,
-      rgba(232, 228, 217, 0.08) 60%,
-      rgba(255, 255, 255, 0)
+      rgba(232, 125, 155, 0) 0,
+      rgba(232, 125, 155, 0.06) 20%,
+      rgba(232, 125, 155, 0.12) 60%,
+      rgba(232, 125, 155, 0) 100%
     );
     animation: shimmer 2s infinite;
   }

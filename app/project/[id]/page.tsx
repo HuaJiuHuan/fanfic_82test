@@ -1,4 +1,4 @@
-import { getProjectById } from "@/app/actions/project";
+import { getProjectById, getOutlinesByProject } from "@/app/actions/project";
 import { db } from "@/lib/db";
 import { outlines } from "@/lib/db-schema";
 import { desc, eq } from "drizzle-orm";
@@ -36,6 +36,8 @@ export default async function ProjectWorkspacePage({ params }: { params: { id: s
     .where(eq(outlines.projectId, id))
     .orderBy(desc(outlines.createdAt))) as OutlineRecord[];
 
+  const activeOutlineId = project.activeOutlineId || historyOutlines[0]?.id || null;
+
   return (
     <div className="min-h-screen bg-academia-bg text-academia-parchment font-sans flex flex-col selection:bg-academia-gold/20">
       <header className="w-full px-6 py-4 border-b border-academia-border bg-academia-bg/80 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center">
@@ -70,7 +72,7 @@ export default async function ProjectWorkspacePage({ params }: { params: { id: s
         </aside>
 
         <section className="lg:col-span-9 bg-academia-surface/30 border border-academia-border rounded-xl p-6 min-h-[700px] flex flex-col">
-          <WorkspaceClient project={project} initialHistory={historyOutlines} />
+          <WorkspaceClient project={project} initialHistory={historyOutlines} activeOutlineId={activeOutlineId} />
         </section>
       </main>
     </div>
