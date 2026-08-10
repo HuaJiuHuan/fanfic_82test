@@ -1,9 +1,8 @@
-/* 1. Tailwind v4 的全新引入方式 */
+
 @import "tailwindcss";
 
-/* 2. v4 专属的主题配置块 */
 @theme {
-  /* 日系轻小说风调色板 —— 暖白漫画纸 + 樱花粉点缀 */
+
   --color-academia-bg: #faf7f2;
   --color-academia-surface: #ffffff;
   --color-academia-border: #e8e0d5;
@@ -12,12 +11,11 @@
   --color-academia-crimson: #d4686c;
   --color-academia-muted: #a09890;
 
-  /* 定义动画 */
+
   --animate-breathe: breathe 3s ease-in-out infinite;
   --animate-fade-in-up: fade-in-up 0.7s ease-out forwards;
   --animate-blink: blink 1s step-end infinite;
-  
-  /* 定义关键帧 */
+
   @keyframes breathe {
     0%, 100% { opacity: 0.5; transform: scale(0.99); }
     50% { opacity: 1; transform: scale(1); }
@@ -35,7 +33,7 @@
   }
 }
 
-/* 3. 全局基础样式覆盖 (使用原生 CSS 变量替代 @apply) */
+
 @layer base {
   body {
     background-color: var(--color-academia-bg);
@@ -44,7 +42,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* 浅色滚动条 —— 适配暖白背景 */
+
   ::-webkit-scrollbar {
     width: 6px;
   }
@@ -60,7 +58,7 @@
   }
 }
 
-/* 4. 骨架屏光泽扫过特效 */
+
 @layer utilities {
   .animate-shimmer-bg {
     position: relative;

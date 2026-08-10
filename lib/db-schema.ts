@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
-// 核心实体：项目 (Project) - 也就是你的“坑”
+// 核心实体：项目 (Project) 
 export const projects = sqliteTable('projects', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: text('title').notNull(),           // 项目代号/书名
@@ -12,7 +12,7 @@ export const projects = sqliteTable('projects', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });
 
-// 从属实体：大纲 (Outline) - 依附于项目，一个项目可以有多版大纲
+// 从属实体：大纲 (Outline) 
 export const outlines = sqliteTable('outlines', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   projectId: text('project_id')
