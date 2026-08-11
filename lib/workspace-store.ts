@@ -304,13 +304,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   },
 
   enterWritingMode: async () => {
-    const { history, selectedIndex } = get();
+    const { project, history, selectedIndex } = get();
     const current = history[selectedIndex];
     if (!current) return;
     const outline = current.content;
     if (!outline) return;
     try {
-      const drafts = await getDraftsByOutlineAction(current.id);
+      const drafts = await getDraftsByOutlineAction(project.id, current.id);
       const map: Record<string, string> = {};
       drafts.forEach((d) => {
         map[d.sceneId] = d.content;
@@ -365,7 +365,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (!sceneInfo || !activeSceneId || !current) return;
     set({ isGeneratingScene: true });
     try {
-      const res = await generateSceneDraftAction(project.fandom, project.characters, project.premise, {
+      const res = await generateSceneDraftAction(project.id, project.fandom, project.characters, project.premise, {
+        sceneId: activeSceneId,
         sceneNumber: sceneInfo.sceneNumber,
         location: sceneInfo.location,
         plotAction: sceneInfo.plotAction,

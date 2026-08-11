@@ -6,8 +6,10 @@ import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 // 获取某一大纲下的所有正文切片
-export async function getDraftsByOutlineAction(outlineId: string) {
-  return await db.select().from(sceneDrafts).where(eq(sceneDrafts.outlineId, outlineId));
+export async function getDraftsByOutlineAction(projectId: string, outlineId: string) {
+  return await db.select().from(sceneDrafts).where(
+    and(eq(sceneDrafts.projectId, projectId), eq(sceneDrafts.outlineId, outlineId))
+  );
 }
 
 // 保存场景正文（有则更新，无则插入）
