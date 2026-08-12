@@ -20,7 +20,7 @@ export async function extractStoryInfoAction(storyText: string) {
       2. 原著/世界观：推测这篇小说所属的虚构宇宙（如果是原创请标注"原创"）
       3. 核心角色：文中出现的主要角色名称
       4. 脑洞总结：用一句话概括这篇小说的核心创意和故事主线
-      
+
       请严格遵循 JSON 格式输出。`,
       prompt: `请分析以下短篇小说正文，提取关键信息：\n\n${storyText}`,
       temperature: AI_CONFIG.temperature.outline,

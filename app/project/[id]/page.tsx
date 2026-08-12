@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import WorkspaceClient from "./WorkspaceClient";
+import RightPanel from "@/components/RightPanel";
 import type { OutlineRecord } from "@/lib/types";
 
 interface Props {
@@ -71,9 +72,13 @@ export default async function ProjectWorkspacePage({ params }: { params: { id: s
           </div>
         </aside>
 
-        <section className="lg:col-span-9 bg-academia-surface/30 border border-academia-border rounded-xl p-6 min-h-[700px] flex flex-col">
+        <section className="lg:col-span-6 bg-academia-surface/30 border border-academia-border rounded-xl p-6 min-h-[700px] flex flex-col">
           <WorkspaceClient project={project} initialHistory={historyOutlines} activeOutlineId={activeOutlineId} />
         </section>
+
+        <aside className="lg:col-span-3 space-y-6">
+          <RightPanel projectId={id} />
+        </aside>
       </main>
     </div>
   );

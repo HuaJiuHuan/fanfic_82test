@@ -1,6 +1,8 @@
 'use server';
 
 import { mastra } from '@/mastra';
+import { fullSceneScorer, fullTrajectoryScorer } from '@/lib/eval/scorers';
+import { runAndSaveEval } from '@/lib/eval/run-eval';
 
 export async function generateSceneDraftAction(
   projectId: string,
@@ -60,7 +62,60 @@ ${customNote}
       }
     );
 
-    return { success: true, text: result.text };
+    const sceneContent = result.text;
+
+    const sceneInput = {
+      fandom,
+      characters,
+      premise,
+      sceneInfo: {
+        location: sceneInfo.location,
+        plotAction: sceneInfo.plotAction,
+        conflict: sceneInfo.conflict,
+        emotionalShift: sceneInfo.emotionalShift,
+        wordCount: sceneInfo.wordCount,
+        style: sceneInfo.style,
+        customNote: sceneInfo.customNote,
+      },
+    };
+
+    const trajectoryData = {
+      steps: (result.steps ?? []).map((step) => ({
+        stepType: 'model-generation' as const,
+        name: step.text ? 'llm.generate' : 'llm.step',
+        text: step.text,
+        toolCalls: step.toolCalls?.map((tc) => ({
+          toolName: tc.payload?.toolName,
+          args: tc.payload?.args,
+        })),
+        toolResults: step.toolResults?.map((tr) => ({
+          toolName: tr.payload?.toolName,
+          result: tr.payload?.result,
+        })),
+        finishReason: step.finishReason,
+        usage: step.usage,
+      })),
+    };
+
+    runAndSaveEval({
+      scorer: fullSceneScorer,
+      projectId,
+      targetType: 'scene',
+      targetId: sceneInfo.sceneId,
+      input: sceneInput,
+      output: sceneContent,
+    }).catch((err) => console.error('场景质量评估失败:', err));
+
+    runAndSaveEval({
+      scorer: fullTrajectoryScorer,
+      projectId,
+      targetType: 'agent_trajectory',
+      targetId: sceneInfo.sceneId,
+      input: { prompt: `场景 ${sceneInfo.sceneId} 的写作任务` },
+      output: trajectoryData,
+    }).catch((err) => console.error('Agent轨迹评估失败:', err));
+
+    return { success: true, text: sceneContent };
   } catch (error) {
     console.error('生成场景正文失败:', error);
     return { success: false, error: '执笔过程中灵感中断，请重试。' };

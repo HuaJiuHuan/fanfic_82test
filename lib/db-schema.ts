@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // 核心实体：项目 (Project) 
 export const projects = sqliteTable('projects', {
@@ -38,3 +38,17 @@ export const sceneDrafts = sqliteTable('scene_drafts', {
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });
+
+export const evaluations = sqliteTable('evaluations', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  targetType: text('target_type').notNull(),
+  targetId: text('target_id').notNull(),
+  score: real('score').notNull(),
+  result: text('result', { mode: 'json' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+}, (table) => ({
+  uniqueTarget: uniqueIndex('eval_target_idx').on(table.projectId, table.targetType, table.targetId),
+}));

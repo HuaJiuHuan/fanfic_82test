@@ -8,6 +8,8 @@ import { eq } from 'drizzle-orm';
 import { StoryOutlineSchema } from '@/lib/schema';
 import { SceneSplitSchema } from '@/lib/scene-split-schema';
 import { AI_CONFIG } from '@/lib/ai-config';
+import { fullOutlineScorer } from '@/lib/eval/scorers';
+import { runAndSaveEval } from '@/lib/eval/run-eval';
 
 const createProjectStep = createStep({
   id: 'createProject',
@@ -56,6 +58,9 @@ const generateOutlineStep = createStep({
     projectId: z.string(),
     outline: z.any(),
     storyText: z.string(),
+    fandom: z.string(),
+    characters: z.string(),
+    premise: z.string(),
   }),
   execute: async ({ inputData }) => {
     const { projectId, fandom, characters, premise, storyText } = inputData;
@@ -82,7 +87,7 @@ ${storyText}
       temperature: AI_CONFIG.temperature.outline,
     });
 
-    return { projectId, outline: result.object, storyText };
+    return { projectId, outline: result.object, storyText, fandom, characters, premise };
   },
 });
 
@@ -93,15 +98,21 @@ const saveOutlineStep = createStep({
     projectId: z.string(),
     outline: z.any(),
     storyText: z.string(),
+    fandom: z.string(),
+    characters: z.string(),
+    premise: z.string(),
   }),
   outputSchema: z.object({
     projectId: z.string(),
     outlineId: z.string(),
     outline: z.any(),
     storyText: z.string(),
+    fandom: z.string(),
+    characters: z.string(),
+    premise: z.string(),
   }),
   execute: async ({ inputData }) => {
-    const { projectId, outline, storyText } = inputData;
+    const { projectId, outline, storyText, fandom, characters, premise } = inputData;
     const [inserted] = await db
       .insert(outlines)
       .values({ projectId, content: outline })
@@ -112,7 +123,41 @@ const saveOutlineStep = createStep({
       .set({ activeOutlineId: inserted.id })
       .where(eq(projects.id, projectId));
 
-    return { projectId, outlineId: inserted.id, outline, storyText };
+    return { projectId, outlineId: inserted.id, outline, storyText, fandom, characters, premise };
+  },
+});
+
+const evaluateOutlineStep = createStep({
+  id: 'evaluateOutline',
+  description: 'AI 评估大纲质量',
+  inputSchema: z.object({
+    projectId: z.string(),
+    outlineId: z.string(),
+    outline: z.any(),
+    storyText: z.string(),
+    fandom: z.string(),
+    characters: z.string(),
+    premise: z.string(),
+  }),
+  outputSchema: z.object({
+    projectId: z.string(),
+    outlineId: z.string(),
+    outline: z.any(),
+    storyText: z.string(),
+  }),
+  execute: async ({ inputData }) => {
+    const { projectId, outlineId, outline, storyText, fandom, characters, premise } = inputData;
+
+    runAndSaveEval({
+      scorer: fullOutlineScorer,
+      projectId,
+      targetType: 'outline',
+      targetId: outlineId,
+      input: { fandom, characters, premise, storyText: storyText.slice(0, 2000) },
+      output: outline,
+    }).catch((err) => console.error('大纲评估失败:', err));
+
+    return { projectId, outlineId, outline, storyText };
   },
 });
 
@@ -226,6 +271,7 @@ export const fullImportWorkflow = new Workflow({
   .then(createProjectStep)
   .then(generateOutlineStep)
   .then(saveOutlineStep)
+  .then(evaluateOutlineStep)
   .then(splitTextToScenesStep)
   .then(saveDraftsStep)
   .commit();

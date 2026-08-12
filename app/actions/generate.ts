@@ -6,11 +6,13 @@ import { db } from '@/lib/db';
 import { outlines } from '@/lib/db-schema';
 import { StoryOutlineSchema } from '@/lib/schema';
 import { AI_CONFIG } from '@/lib/ai-config';
+import { fullOutlineScorer } from '@/lib/eval/scorers';
+import { runAndSaveEval } from '@/lib/eval/run-eval';
 
 export async function generateOutlineAction(
-  projectId: string, 
-  fandom: string, 
-  characters: string, 
+  projectId: string,
+  fandom: string,
+  characters: string,
   premise: string
 ) {
   try {
@@ -22,7 +24,7 @@ export async function generateOutlineAction(
       推演并生成一个逻辑严密、不 OOC 且跌宕起伏的短篇小说大纲。
       必须严格遵守 JSON 结构输出。`,
       prompt: `原著背景：${fandom}\n主要角色：${characters}\n用户核心脑洞：${premise}`,
-      temperature: AI_CONFIG.temperature.outline, 
+      temperature: AI_CONFIG.temperature.outline,
     });
 
     const [insertedOutline] = await db.insert(outlines).values({
@@ -30,9 +32,18 @@ export async function generateOutlineAction(
       content: object,
     }).returning({ id: outlines.id });
 
+    runAndSaveEval({
+      scorer: fullOutlineScorer,
+      projectId,
+      targetType: 'outline',
+      targetId: insertedOutline.id,
+      input: { fandom, characters, premise },
+      output: object,
+    }).catch((err) => console.error('大纲评估失败:', err));
+
     return { success: true, data: object, outlineId: insertedOutline.id };
   } catch (error) {
-    console.error("生成大纲失败:", error);
-    return { success: false, error: "系统思考时发生错误，请重试。" };
+    console.error('生成大纲失败:', error);
+    return { success: false, error: '系统思考时发生错误，请重试。' };
   }
 }
