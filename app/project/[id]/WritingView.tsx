@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useCallback } from "react";
 import type { Scene, StoryOutline } from "@/lib/types";
+import type { EditorReview } from "@/lib/workspace-store";
 
 interface WritingViewProps {
   outline: StoryOutline;
@@ -12,6 +13,7 @@ interface WritingViewProps {
   isGeneratingScene: boolean;
   isTyping: boolean;
   activeSceneInfo: Scene | null;
+  editorReview: EditorReview | null;
   onSelectScene: (sceneId: string) => void;
   onDraftChange: (content: string) => void;
   onSaveDraft: () => void;
@@ -37,6 +39,7 @@ export default function WritingView({
   isGeneratingScene,
   isTyping,
   activeSceneInfo,
+  editorReview,
   onSelectScene,
   onDraftChange,
   onSaveDraft,
@@ -82,6 +85,10 @@ export default function WritingView({
         <div className="mb-4 p-3 bg-academia-crimson/10 border border-academia-crimson/30 rounded-lg text-xs text-academia-crimson">
           {error}
         </div>
+      )}
+
+      {editorReview && (
+        <EditorReviewPanel review={editorReview} />
       )}
 
       <div className="flex justify-between items-center border-b border-academia-border pb-4">
@@ -268,6 +275,60 @@ export default function WritingView({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: 'bg-red-500/20 text-red-400 border-red-500/30',
+  major: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  minor: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+};
+
+const SEVERITY_LABELS: Record<string, string> = {
+  critical: '严重',
+  major: '重要',
+  minor: '建议',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  ooc: 'OOC',
+  continuity: '连贯性',
+  outline_fit: '大纲契合',
+  prose: '文笔',
+};
+
+function EditorReviewPanel({ review }: { review: EditorReview }) {
+  return (
+    <div className="bg-academia-surface border border-academia-border rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-academia-border/50">
+        <span className="text-xs font-bold text-academia-parchment">编辑审校报告</span>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+          review.verdict === 'approved'
+            ? 'bg-green-500/10 text-green-400 border-green-500/30'
+            : 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+        }`}>
+          {review.verdict === 'approved' ? '通过' : '已修订'}
+        </span>
+      </div>
+      <div className="px-4 py-2">
+        <p className="text-xs text-academia-muted">{review.summary}</p>
+      </div>
+      {review.issues.length > 0 && (
+        <div className="px-4 pb-3 space-y-1.5">
+          {review.issues.map((issue, i) => (
+            <div key={i} className="flex items-start gap-2 text-[11px]">
+              <span className={`shrink-0 px-1.5 py-0.5 rounded border text-[10px] ${SEVERITY_COLORS[issue.severity] || ''}`}>
+                {SEVERITY_LABELS[issue.severity] || issue.severity}
+              </span>
+              <span className="text-academia-muted/60 text-[10px] shrink-0 mt-0.5">
+                [{CATEGORY_LABELS[issue.category] || issue.category}]
+              </span>
+              <span className="text-academia-parchment/80">{issue.description}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

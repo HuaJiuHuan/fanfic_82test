@@ -6,8 +6,6 @@ import { db } from '@/lib/db';
 import { outlines } from '@/lib/db-schema';
 import { StoryOutlineSchema } from '@/lib/schema';
 import { AI_CONFIG } from '@/lib/ai-config';
-import { fullOutlineScorer } from '@/lib/eval/scorers';
-import { runAndSaveEval } from '@/lib/eval/run-eval';
 
 export async function generateOutlineAction(
   projectId: string,
@@ -31,15 +29,6 @@ export async function generateOutlineAction(
       projectId,
       content: object,
     }).returning({ id: outlines.id });
-
-    runAndSaveEval({
-      scorer: fullOutlineScorer,
-      projectId,
-      targetType: 'outline',
-      targetId: insertedOutline.id,
-      input: { fandom, characters, premise },
-      output: object,
-    }).catch((err) => console.error('大纲评估失败:', err));
 
     return { success: true, data: object, outlineId: insertedOutline.id };
   } catch (error) {

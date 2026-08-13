@@ -7,6 +7,19 @@ import { generateSceneDraftAction } from '@/app/actions/generate-scene';
 
 // ==================== 类型定义 ====================
 
+export interface EditorReviewIssue {
+  severity: 'critical' | 'major' | 'minor';
+  category: 'ooc' | 'continuity' | 'outline_fit' | 'prose';
+  description: string;
+  suggestion: string;
+}
+
+export interface EditorReview {
+  verdict: 'approved' | 'needs_revision';
+  summary: string;
+  issues: EditorReviewIssue[];
+}
+
 interface WorkspaceState {
   project: Project;
   isLoading: boolean;
@@ -26,6 +39,7 @@ interface WorkspaceState {
   sceneStyle: string;
   sceneCustomNote: string;
   confirmingDelete: boolean;
+  editorReview: EditorReview | null;
 }
 
 interface WorkspaceActions {
@@ -101,6 +115,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   sceneStyle: '',
   sceneCustomNote: '',
   confirmingDelete: false,
+  editorReview: null,
 
   // ---------- 初始化 ----------
   init: (project, initialHistory, activeOutlineId) => {
@@ -377,7 +392,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         customNote: sceneCustomNote || undefined,
       });
       if (res.success && res.text) {
-        set({ isGeneratingScene: false, isTyping: true });
+        set({
+          isGeneratingScene: false,
+          isTyping: true,
+          editorReview: res.editorReview ?? null,
+        });
         const fullText = res.text!;
         let charIndex = 0;
         const typingSpeed = 15;

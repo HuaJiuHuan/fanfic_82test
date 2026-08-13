@@ -41,6 +41,7 @@ export default function WorkspaceClient({ project, initialHistory, activeOutline
   const sceneStyle = useWorkspaceStore((s) => s.sceneStyle);
   const sceneCustomNote = useWorkspaceStore((s) => s.sceneCustomNote);
   const confirmingDelete = useWorkspaceStore((s) => s.confirmingDelete);
+  const editorReview = useWorkspaceStore((s) => s.editorReview);
 
   const currentOutline = useCurrentOutline();
   const displayData = useDisplayData();
@@ -125,6 +126,7 @@ export default function WorkspaceClient({ project, initialHistory, activeOutline
         isGeneratingScene={isGeneratingScene}
         isTyping={isTyping}
         activeSceneInfo={activeSceneInfo}
+        editorReview={editorReview}
         onSelectScene={setActiveScene}
         onDraftChange={(content) => {
           if (activeSceneId) updateDraft(activeSceneId, content);
