@@ -23,6 +23,7 @@ export const outlines = sqliteTable('outlines', {
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });
 
+// 从属实体：场景草稿 (SceneDraft)
 export const sceneDrafts = sqliteTable('scene_drafts', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   projectId: text('project_id')

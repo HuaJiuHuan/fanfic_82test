@@ -23,7 +23,7 @@ export const StoryOutlineSchema = z.object({
   acts: z.array(
     z.object({
       actTitle: z.string().describe("幕标题（如：起因、发展、高潮、结局）"),
-      scenes: z.array(SceneBeatSchema).describe("该幕下的具体场景列表"), // 这里正确引用了带有 id 的 Schema
+      scenes: z.array(SceneBeatSchema).describe("该幕下的具体场景列表"),
     })
   ).max(4).describe("故事分为几幕，通常短篇包含3-4幕"),
 });
