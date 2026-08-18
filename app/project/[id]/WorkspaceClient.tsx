@@ -42,6 +42,7 @@ export default function WorkspaceClient({ project, initialHistory, activeOutline
   const sceneCustomNote = useWorkspaceStore((s) => s.sceneCustomNote);
   const confirmingDelete = useWorkspaceStore((s) => s.confirmingDelete);
   const editorReview = useWorkspaceStore((s) => s.editorReview);
+  const generatingPhase = useWorkspaceStore((s) => s.generatingPhase);
 
   const currentOutline = useCurrentOutline();
   const displayData = useDisplayData();
@@ -143,6 +144,7 @@ export default function WorkspaceClient({ project, initialHistory, activeOutline
         onSceneWordCountChange={setSceneWordCount}
         onSceneStyleChange={setSceneStyle}
         onSceneCustomNoteChange={setSceneCustomNote}
+        generatingPhase={generatingPhase}
       />
     );
   }

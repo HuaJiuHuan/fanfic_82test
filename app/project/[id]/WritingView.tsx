@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback } from "react";
 import type { Scene, StoryOutline } from "@/lib/types";
-import type { EditorReview } from "@/lib/workspace-store";
+import type { EditorReview, GeneratingPhase } from "@/lib/workspace-store";
 
 interface WritingViewProps {
   outline: StoryOutline;
@@ -28,6 +28,7 @@ interface WritingViewProps {
   onSceneWordCountChange: (count: number) => void;
   onSceneStyleChange: (style: string) => void;
   onSceneCustomNoteChange: (note: string) => void;
+  generatingPhase: GeneratingPhase;
 }
 
 export default function WritingView({
@@ -54,6 +55,7 @@ export default function WritingView({
   onSceneWordCountChange,
   onSceneStyleChange,
   onSceneCustomNoteChange,
+  generatingPhase,
 }: WritingViewProps) {
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentContent = draftsMap[activeSceneId || ""] || "";
@@ -85,6 +87,10 @@ export default function WritingView({
         <div className="mb-4 p-3 bg-academia-crimson/10 border border-academia-crimson/30 rounded-lg text-xs text-academia-crimson">
           {error}
         </div>
+      )}
+
+      {generatingPhase !== 'idle' && generatingPhase !== 'done' && (
+        <PhaseIndicator phase={generatingPhase} />
       )}
 
       {editorReview && (
@@ -246,12 +252,6 @@ export default function WritingView({
                   }`}
                   aria-label={`场景 ${activeSceneInfo.sceneNumber} 正文编辑区`}
                 />
-                {isTyping && (
-                  <div className="absolute bottom-4 left-6 flex items-center gap-2">
-                    <span className="text-[10px] text-academia-muted animate-pulse">AI 正在打字机输出...</span>
-                    <span className="w-2 h-4 bg-academia-gold animate-blink cursor-text"></span>
-                  </div>
-                )}
                 <button
                   onClick={isTyping ? onStopTyping : onGenerateScene}
                   disabled={isGeneratingScene}
@@ -297,6 +297,57 @@ const CATEGORY_LABELS: Record<string, string> = {
   outline_fit: '大纲契合',
   prose: '文笔',
 };
+
+const PHASE_CONFIG: Record<string, { icon: string; label: string }> = {
+  setting: { icon: '⚙️', label: '设定 Agent 正在分析场景设定...' },
+  writing: { icon: '✍️', label: '写作 Agent 正在撰写正文...' },
+  editing: { icon: '🔍', label: '编辑 Agent 正在审校修订...' },
+};
+
+function PhaseIndicator({ phase }: { phase: GeneratingPhase }) {
+  const config = PHASE_CONFIG[phase];
+  if (!config) return null;
+
+  const phases = ['setting', 'writing', 'editing'] as const;
+  const currentIdx = phases.indexOf(phase as typeof phases[number]);
+
+  return (
+    <div className="bg-academia-surface border border-academia-border rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-academia-border/50">
+        <span className="text-xs font-bold text-academia-parchment">AI 生成进度</span>
+      </div>
+      <div className="px-4 py-3 space-y-2">
+        {phases.map((p, i) => {
+          const cfg = PHASE_CONFIG[p];
+          const isActive = i === currentIdx;
+          const isDone = i < currentIdx;
+
+          return (
+            <div key={p} className="flex items-center gap-2 text-xs">
+              <span className="shrink-0 w-5 text-center">
+                {isDone ? '✅' : isActive ? cfg.icon : '○'}
+              </span>
+              <span
+                className={
+                  isDone
+                    ? 'text-academia-muted/60 line-through'
+                    : isActive
+                      ? 'text-academia-gold animate-pulse'
+                      : 'text-academia-muted/40'
+                }
+              >
+                {isDone ? cfg.label.replace('正在', '已') : cfg.label}
+              </span>
+              {isActive && (
+                <span className="w-2 h-4 bg-academia-gold animate-blink ml-auto" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function EditorReviewPanel({ review }: { review: EditorReview }) {
   return (

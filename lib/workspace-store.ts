@@ -3,7 +3,6 @@ import type { OutlineRecord, Project, StoryOutline, Scene } from '@/lib/types';
 import { generateOutlineAction } from '@/app/actions/generate';
 import { updateOutlineAction, deleteOutlineAction } from '@/app/actions/outline';
 import { saveDraftAction, getDraftsByOutlineAction } from '@/app/actions/draft';
-import { generateSceneDraftAction } from '@/app/actions/generate-scene';
 
 // ==================== 类型定义 ====================
 
@@ -19,6 +18,8 @@ export interface EditorReview {
   summary: string;
   issues: EditorReviewIssue[];
 }
+
+export type GeneratingPhase = 'idle' | 'setting' | 'writing' | 'editing' | 'done';
 
 interface WorkspaceState {
   project: Project;
@@ -40,6 +41,8 @@ interface WorkspaceState {
   sceneCustomNote: string;
   confirmingDelete: boolean;
   editorReview: EditorReview | null;
+  generatingPhase: GeneratingPhase;
+  abortControllerRef: { current: AbortController | null };
 }
 
 interface WorkspaceActions {
@@ -116,6 +119,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   sceneCustomNote: '',
   confirmingDelete: false,
   editorReview: null,
+  generatingPhase: 'idle',
+  abortControllerRef: { current: null },
 
   // ---------- 初始化 ----------
   init: (project, initialHistory, activeOutlineId) => {
@@ -374,57 +379,101 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
   generateScene: async () => {
     const { project, activeSceneId, history, selectedIndex, sceneWordCount, sceneStyle, sceneCustomNote } = get();
-    const outline = getCurrentOutline(get());
     const sceneInfo = getActiveSceneInfo(get());
     const current = history[selectedIndex];
     if (!sceneInfo || !activeSceneId || !current) return;
-    set({ isGeneratingScene: true });
+
+    const abortController = new AbortController();
+    set({ isGeneratingScene: true, generatingPhase: 'setting', editorReview: null, abortControllerRef: { current: abortController } });
+
     try {
-      const res = await generateSceneDraftAction(project.id, project.fandom, project.characters, project.premise, {
-        sceneId: activeSceneId,
-        sceneNumber: sceneInfo.sceneNumber,
-        location: sceneInfo.location,
-        plotAction: sceneInfo.plotAction,
-        conflict: sceneInfo.conflict,
-        emotionalShift: sceneInfo.emotionalShift,
-        wordCount: sceneWordCount || undefined,
-        style: sceneStyle || undefined,
-        customNote: sceneCustomNote || undefined,
+      const response = await fetch('/api/generate-scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: project.id,
+          fandom: project.fandom,
+          characters: project.characters,
+          premise: project.premise,
+          sceneInfo: {
+            sceneId: activeSceneId,
+            sceneNumber: sceneInfo.sceneNumber,
+            location: sceneInfo.location,
+            plotAction: sceneInfo.plotAction,
+            conflict: sceneInfo.conflict,
+            emotionalShift: sceneInfo.emotionalShift,
+            wordCount: sceneWordCount || undefined,
+            style: sceneStyle || undefined,
+            customNote: sceneCustomNote || undefined,
+          },
+        }),
+        signal: abortController.signal,
       });
-      if (res.success && res.text) {
-        set({
-          isGeneratingScene: false,
-          isTyping: true,
-          editorReview: res.editorReview ?? null,
-        });
-        const fullText = res.text!;
-        let charIndex = 0;
-        const typingSpeed = 15;
-        const typeNextChar = () => {
-          if (charIndex >= fullText.length) {
-            set({ isTyping: false });
-            return;
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      set({ isGeneratingScene: false, isTyping: true });
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = JSON.parse(line.slice(6));
+
+          if (!get().isTyping && data.phase !== 'complete') continue;
+
+          switch (data.phase) {
+            case 'setting':
+              set({ generatingPhase: 'setting' });
+              break;
+            case 'writing':
+              set({ generatingPhase: 'writing' });
+              if (data.accumulated) {
+                set((s) => ({
+                  draftsMap: { ...s.draftsMap, [activeSceneId]: data.accumulated },
+                }));
+              }
+              break;
+            case 'editing':
+              set({ generatingPhase: 'editing' });
+              break;
+            case 'complete':
+              set({
+                isTyping: false,
+                generatingPhase: 'done',
+                draftsMap: { ...get().draftsMap, [activeSceneId]: data.finalText },
+                editorReview: data.editorReview ?? null,
+              });
+              break;
+            case 'error':
+              set({ isTyping: false, generatingPhase: 'idle', error: data.message as string });
+              break;
           }
-          const currentTyping = get().isTyping;
-          if (!currentTyping) return;
-          charIndex++;
-          const partialText = fullText.slice(0, charIndex);
-          set((s) => ({
-            draftsMap: { ...s.draftsMap, [activeSceneId]: partialText },
-          }));
-          setTimeout(typeNextChar, typingSpeed);
-        };
-        typeNextChar();
-      } else {
-        set({ isGeneratingScene: false, error: res.error || '生成失败' });
+        }
       }
-    } catch {
-      set({ isGeneratingScene: false, error: '网络异常，无法连接大模型。' });
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        set({ isGeneratingScene: false, isTyping: false, generatingPhase: 'idle' });
+      } else {
+        set({ isGeneratingScene: false, isTyping: false, generatingPhase: 'idle', error: '生成失败，无法连接大模型。' });
+      }
     }
   },
 
   stopTyping: () => {
-    set({ isTyping: false });
+    const { abortControllerRef } = get();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    set({ isTyping: false, generatingPhase: 'idle' });
   },
 }));
 
