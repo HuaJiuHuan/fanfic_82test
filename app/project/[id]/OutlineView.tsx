@@ -1,63 +1,41 @@
 "use client";
 
-import type { OutlineRecord, Project, StoryOutline } from "@/lib/types";
+import { memo } from "react";
+import { useWorkspaceStore, useDisplayData } from "@/lib/workspace-store";
+import type { Project } from "@/lib/types";
 import OutlineSwitcher from "./OutlineSwitcher";
 
 interface OutlineViewProps {
   project: Project;
-  isLoading: boolean;
-  error: string;
-  history: OutlineRecord[];
-  selectedIndex: number;
-  isEditing: boolean;
-  editedOutline: StoryOutline | null;
-  displayData: StoryOutline | null;
-  onSelectVersion: (index: number) => void;
-  onGenerate: () => void;
-  onDelete: () => void;
-  onToggleDeleteConfirm: () => void;
-  confirmingDelete: boolean;
-  onStartEditing: () => void;
-  onCancelEditing: () => void;
-  onSaveEditing: () => void;
-  onEnterWritingMode: () => void;
-  onAddAct: () => void;
-  onRemoveAct: (actIdx: number) => void;
-  onAddScene: (actIdx: number) => void;
-  onRemoveScene: (actIdx: number, sceneIdx: number) => void;
-  onUpdateTitle: (title: string) => void;
-  onUpdateLogline: (logline: string) => void;
-  onUpdateActTitle: (actIdx: number, title: string) => void;
-  onUpdateScene: (actIdx: number, sceneIdx: number, field: string, value: string) => void;
 }
 
-export default function OutlineView({
-  project,
-  isLoading,
-  error,
-  history,
-  selectedIndex,
-  isEditing,
-  editedOutline,
-  displayData,
-  onSelectVersion,
-  onGenerate,
-  onDelete,
-  onToggleDeleteConfirm,
-  confirmingDelete,
-  onStartEditing,
-  onCancelEditing,
-  onSaveEditing,
-  onEnterWritingMode,
-  onAddAct,
-  onRemoveAct,
-  onAddScene,
-  onRemoveScene,
-  onUpdateTitle,
-  onUpdateLogline,
-  onUpdateActTitle,
-  onUpdateScene,
-}: OutlineViewProps) {
+export default memo(function OutlineView({ project }: OutlineViewProps) {
+  const isLoading = useWorkspaceStore((s) => s.isLoading);
+  const error = useWorkspaceStore((s) => s.error);
+  const history = useWorkspaceStore((s) => s.history);
+  const selectedIndex = useWorkspaceStore((s) => s.selectedIndex);
+  const isEditing = useWorkspaceStore((s) => s.isEditing);
+  const confirmingDelete = useWorkspaceStore((s) => s.confirmingDelete);
+
+  const displayData = useDisplayData();
+
+  const setSelectedIndex = useWorkspaceStore((s) => s.setSelectedIndex);
+  const startEditing = useWorkspaceStore((s) => s.startEditing);
+  const cancelEditing = useWorkspaceStore((s) => s.cancelEditing);
+  const updateTitle = useWorkspaceStore((s) => s.updateTitle);
+  const updateLogline = useWorkspaceStore((s) => s.updateLogline);
+  const updateActTitle = useWorkspaceStore((s) => s.updateActTitle);
+  const updateScene = useWorkspaceStore((s) => s.updateScene);
+  const addAct = useWorkspaceStore((s) => s.addAct);
+  const removeAct = useWorkspaceStore((s) => s.removeAct);
+  const addScene = useWorkspaceStore((s) => s.addScene);
+  const removeScene = useWorkspaceStore((s) => s.removeScene);
+  const toggleDeleteConfirm = useWorkspaceStore((s) => s.toggleDeleteConfirm);
+  const generateOutline = useWorkspaceStore((s) => s.generateOutline);
+  const deleteOutline = useWorkspaceStore((s) => s.deleteOutline);
+  const saveEditing = useWorkspaceStore((s) => s.saveEditing);
+  const enterWritingMode = useWorkspaceStore((s) => s.enterWritingMode);
+
   return (
     <div className="w-full h-full flex flex-col space-y-6">
       {error && (
@@ -74,7 +52,7 @@ export default function OutlineView({
               projectId={project.id}
               activeOutlineId={history[selectedIndex]?.id ?? null}
               outlines={history}
-              onSelectVersion={onSelectVersion}
+              onSelectVersion={setSelectedIndex}
             />
           )}
         </div>
@@ -83,7 +61,7 @@ export default function OutlineView({
           {history.length > 0 && !isEditing && (
             <>
               <button
-                onClick={onStartEditing}
+                onClick={startEditing}
                 disabled={isLoading}
                 className="text-xs text-academia-muted hover:text-academia-parchment px-3 py-2 transition-colors border border-transparent hover:border-academia-border rounded"
               >
@@ -92,14 +70,14 @@ export default function OutlineView({
               {confirmingDelete ? (
                 <>
                   <button
-                    onClick={onToggleDeleteConfirm}
+                    onClick={toggleDeleteConfirm}
                     disabled={isLoading}
                     className="text-xs text-academia-muted px-3 py-2 transition-colors border border-academia-border rounded hover:text-academia-parchment"
                   >
                     取消
                   </button>
                   <button
-                    onClick={onDelete}
+                    onClick={deleteOutline}
                     disabled={isLoading}
                     className="text-xs bg-academia-crimson text-white px-3 py-2 rounded hover:bg-red-700 transition-colors"
                   >
@@ -108,7 +86,7 @@ export default function OutlineView({
                 </>
               ) : (
                 <button
-                  onClick={onToggleDeleteConfirm}
+                  onClick={toggleDeleteConfirm}
                   disabled={isLoading}
                   className="text-xs text-academia-crimson hover:text-red-400 px-3 py-2 transition-colors border border-transparent hover:border-academia-crimson/30 rounded"
                 >
@@ -117,7 +95,7 @@ export default function OutlineView({
               )}
               <span className="w-px h-4 bg-academia-border mx-2"></span>
               <button
-                onClick={onEnterWritingMode}
+                onClick={enterWritingMode}
                 disabled={isLoading}
                 className="bg-academia-parchment text-academia-bg px-4 py-2 rounded-md text-xs font-bold hover:bg-academia-gold transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center gap-2"
               >
@@ -128,14 +106,14 @@ export default function OutlineView({
           {isEditing && (
             <>
               <button
-                onClick={onCancelEditing}
+                onClick={cancelEditing}
                 disabled={isLoading}
                 className="text-xs text-academia-muted px-4 py-2"
               >
                 取消
               </button>
               <button
-                onClick={onSaveEditing}
+                onClick={saveEditing}
                 disabled={isLoading}
                 className="bg-academia-gold text-academia-bg px-5 py-2 rounded-md text-xs font-bold"
               >
@@ -170,7 +148,7 @@ export default function OutlineView({
                   <input
                     type="text"
                     value={displayData.title}
-                    onChange={(e) => onUpdateTitle(e.target.value)}
+                    onChange={(e) => updateTitle(e.target.value)}
                     className="w-full text-3xl font-serif font-bold text-academia-gold bg-transparent border-b border-academia-gold/30 outline-none pb-1"
                     aria-label="大纲标题"
                   />
@@ -182,7 +160,7 @@ export default function OutlineView({
                 {isEditing ? (
                   <textarea
                     value={displayData.logline}
-                    onChange={(e) => onUpdateLogline(e.target.value)}
+                    onChange={(e) => updateLogline(e.target.value)}
                     className="w-full h-20 text-sm italic text-academia-muted bg-academia-surface border border-academia-border rounded p-2 outline-none mt-2"
                     aria-label="一句话故事核心"
                   />
@@ -203,7 +181,7 @@ export default function OutlineView({
                           <input
                             type="text"
                             value={act.actTitle}
-                            onChange={(e) => onUpdateActTitle(actIdx, e.target.value)}
+                            onChange={(e) => updateActTitle(actIdx, e.target.value)}
                             className="bg-transparent border-b border-academia-border outline-none text-academia-parchment flex-1"
                             aria-label={`第 ${actIdx + 1} 幕标题`}
                           />
@@ -214,14 +192,14 @@ export default function OutlineView({
                       {isEditing && (
                         <div className="flex gap-1 pb-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => onAddScene(actIdx)}
+                            onClick={() => addScene(actIdx)}
                             className="text-[10px] text-academia-gold hover:text-academia-parchment border border-academia-gold/30 hover:border-academia-gold/60 rounded px-2 py-0.5 transition-colors"
                             title="添加场景"
                           >
                             + 场景
                           </button>
                           <button
-                            onClick={() => onRemoveAct(actIdx)}
+                            onClick={() => removeAct(actIdx)}
                             className="text-[10px] text-academia-crimson hover:text-red-400 border border-academia-crimson/30 hover:border-academia-crimson/60 rounded px-2 py-0.5 transition-colors"
                             title="删除此幕"
                           >
@@ -242,7 +220,7 @@ export default function OutlineView({
                             </div>
                             {isEditing && (
                               <button
-                                onClick={() => onRemoveScene(actIdx, sceneIdx)}
+                                onClick={() => removeScene(actIdx, sceneIdx)}
                                 className="text-[10px] text-academia-crimson/50 hover:text-academia-crimson opacity-0 group-hover/scene:opacity-100 transition-all border border-transparent hover:border-academia-crimson/30 rounded px-1.5 py-0.5"
                                 title="删除此场景"
                               >
@@ -253,7 +231,7 @@ export default function OutlineView({
                           {isEditing ? (
                             <textarea
                               value={scene.plotAction}
-                              onChange={(e) => onUpdateScene(actIdx, sceneIdx, "plotAction", e.target.value)}
+                              onChange={(e) => updateScene(actIdx, sceneIdx, "plotAction", e.target.value)}
                               className="w-full h-24 text-sm bg-academia-bg border border-academia-border rounded p-2 outline-none"
                               aria-label={`场景 ${scene.sceneNumber} 核心动作`}
                             />
@@ -266,7 +244,7 @@ export default function OutlineView({
                               <input
                                 type="text"
                                 value={scene.conflict}
-                                onChange={(e) => onUpdateScene(actIdx, sceneIdx, "conflict", e.target.value)}
+                                onChange={(e) => updateScene(actIdx, sceneIdx, "conflict", e.target.value)}
                                 className="w-full text-academia-muted bg-transparent border-b border-academia-border outline-none"
                                 aria-label={`场景 ${scene.sceneNumber} 冲突`}
                               />
@@ -279,7 +257,7 @@ export default function OutlineView({
                       {isEditing && act.scenes.length > 0 && (
                         <div className="pt-1">
                           <button
-                            onClick={() => onAddScene(actIdx)}
+                            onClick={() => addScene(actIdx)}
                             className="text-[10px] text-academia-muted hover:text-academia-gold border border-dashed border-academia-border hover:border-academia-gold/50 rounded px-3 py-1.5 transition-colors w-full"
                           >
                             + 添加场景
@@ -291,7 +269,7 @@ export default function OutlineView({
                 ))}
                 {isEditing && (
                   <button
-                    onClick={onAddAct}
+                    onClick={addAct}
                     className="w-full border border-dashed border-academia-border hover:border-academia-gold/50 text-academia-muted hover:text-academia-gold rounded-lg py-3 text-xs transition-colors"
                   >
                     + 添加新幕
@@ -304,4 +282,4 @@ export default function OutlineView({
       </div>
     </div>
   );
-}
+});

@@ -1,5 +1,6 @@
 'use server';
 
+import { cache } from 'react';
 import { db } from '@/lib/db';
 import { projects, outlines, sceneDrafts } from '@/lib/db-schema';
 import { desc, eq, inArray } from 'drizzle-orm';
@@ -22,67 +23,35 @@ export interface ProjectWithStats {
   hasContent: boolean;
 }
 
-export async function getProjectsWithStats(): Promise<ProjectWithStats[]> {
+export const getProjectsWithStats = cache(async (): Promise<ProjectWithStats[]> => {
   const projectList = await db.select().from(projects).orderBy(desc(projects.updatedAt));
 
   if (projectList.length === 0) return [];
 
-  const projectsWithoutOutline = projectList.filter((p) => !p.activeOutlineId);
-  const outlineUpdatableIds = projectsWithoutOutline.map((p) => p.id);
+  const allProjectIds = projectList.map((p) => p.id);
 
-  if (outlineUpdatableIds.length > 0) {
-    const allOutlines = await db
-      .select()
-      .from(outlines)
-      .where(inArray(outlines.projectId, outlineUpdatableIds))
-      .orderBy(desc(outlines.createdAt));
+  const allOutlines = await db
+    .select()
+    .from(outlines)
+    .where(inArray(outlines.projectId, allProjectIds))
+    .orderBy(desc(outlines.createdAt));
 
-    const latestByProject = new Map<string, string>();
-    for (const o of allOutlines) {
-      if (!latestByProject.has(o.projectId)) {
-        latestByProject.set(o.projectId, o.id);
-      }
-    }
-
-    for (const proj of projectsWithoutOutline) {
-      const outlineId = latestByProject.get(proj.id);
-      if (outlineId) {
-        (proj as { activeOutlineId: string }).activeOutlineId = outlineId;
-      }
-    }
-
-    const updates = Array.from(latestByProject.entries())
-      .filter(([projectId]) => projectsWithoutOutline.some((p) => p.id === projectId))
-      .map(([projectId, outlineId]) =>
-        db.update(projects).set({ activeOutlineId: outlineId }).where(eq(projects.id, projectId)),
-      );
-
-    if (updates.length > 0) {
-      await Promise.all(updates);
-    }
-  }
-
-  const outlineIds = projectList
-    .map((p) => p.activeOutlineId)
-    .filter((id): id is string => id !== null && id !== undefined);
-
+  const latestOutlineByProject = new Map<string, string>();
   const outlineMap = new Map<string, (typeof outlines.$inferSelect) & { content: { acts?: { scenes?: { id?: string }[] }[] } }>();
-  if (outlineIds.length > 0) {
-    const allOutlines = await db
-      .select()
-      .from(outlines)
-      .where(inArray(outlines.id, outlineIds));
-    for (const o of allOutlines) {
-      outlineMap.set(o.id, o as any);
+  for (const o of allOutlines) {
+    if (!latestOutlineByProject.has(o.projectId)) {
+      latestOutlineByProject.set(o.projectId, o.id);
     }
+    outlineMap.set(o.id, o as any);
   }
 
+  const allOutlineIds = allOutlines.map((o) => o.id);
   const draftsByOutline = new Map<string, (typeof sceneDrafts.$inferSelect)[]>();
-  if (outlineIds.length > 0) {
+  if (allOutlineIds.length > 0) {
     const allDrafts = await db
       .select()
       .from(sceneDrafts)
-      .where(inArray(sceneDrafts.outlineId, outlineIds));
+      .where(inArray(sceneDrafts.outlineId, allOutlineIds));
     for (const d of allDrafts) {
       const list = draftsByOutline.get(d.outlineId) || [];
       list.push(d);
@@ -93,7 +62,7 @@ export async function getProjectsWithStats(): Promise<ProjectWithStats[]> {
   const result: ProjectWithStats[] = [];
 
   for (const proj of projectList) {
-    const outlineId = proj.activeOutlineId;
+    const outlineId = proj.activeOutlineId || latestOutlineByProject.get(proj.id) || null;
 
     if (!outlineId) {
       result.push({ ...proj, totalWords: 0, sceneCount: 0, hasContent: false });
@@ -129,7 +98,7 @@ export async function getProjectsWithStats(): Promise<ProjectWithStats[]> {
   }
 
   return result;
-}
+});
 
 export async function getProjectById(id: string) {
   const result = await db.select().from(projects).where(eq(projects.id, id)).limit(1);

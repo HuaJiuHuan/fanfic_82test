@@ -1,13 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import type { StoryOutline } from "@/lib/types";
-
-interface ReadingViewProps {
-  outline: StoryOutline;
-  draftsMap: Record<string, string>;
-  onBackToWriting: () => void;
-}
+import { memo, useMemo } from "react";
+import { useWorkspaceStore, useCurrentOutline } from "@/lib/workspace-store";
 
 function countWords(text: string): number {
   if (!text) return 0;
@@ -16,12 +10,14 @@ function countWords(text: string): number {
   return chineseChars + englishWords;
 }
 
-export default function ReadingView({
-  outline,
-  draftsMap,
-  onBackToWriting,
-}: ReadingViewProps) {
+export default memo(function ReadingView() {
+  const draftsMap = useWorkspaceStore((s) => s.draftsMap);
+  const exitReadingView = useWorkspaceStore((s) => s.exitReadingView);
+
+  const outline = useCurrentOutline();
+
   const stats = useMemo(() => {
+    if (!outline) return null;
     const totalScenes = outline.acts.reduce((sum, act) => sum + act.scenes.length, 0);
     const writtenScenes = outline.acts.reduce((sum, act) =>
       sum + act.scenes.filter((s) => draftsMap[s.id]?.trim()).length, 0
@@ -36,6 +32,14 @@ export default function ReadingView({
     return { totalScenes, writtenScenes, totalWords, actStats };
   }, [outline, draftsMap]);
 
+  if (!outline) {
+    return (
+      <div className="w-full h-full flex items-center justify-center text-academia-muted">
+        大纲数据加载中...
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full flex flex-col animate-fade-in-up">
       <div className="flex justify-between items-center border-b border-academia-border pb-4 mb-6">
@@ -44,17 +48,19 @@ export default function ReadingView({
           <p className="text-xs text-academia-muted">{outline.title}</p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-4 text-xs text-academia-muted">
-            <span>
-              已写 <span className="text-academia-gold font-bold">{stats.writtenScenes}</span>/{stats.totalScenes} 场景
-            </span>
-            <span className="text-academia-border">|</span>
-            <span>
-              总计 <span className="text-academia-gold font-bold">{stats.totalWords.toLocaleString()}</span> 字
-            </span>
-          </div>
+          {stats && (
+            <div className="hidden sm:flex items-center gap-4 text-xs text-academia-muted">
+              <span>
+                已写 <span className="text-academia-gold font-bold">{stats.writtenScenes}</span>/{stats.totalScenes} 场景
+              </span>
+              <span className="text-academia-border">|</span>
+              <span>
+                总计 <span className="text-academia-gold font-bold">{stats.totalWords.toLocaleString()}</span> 字
+              </span>
+            </div>
+          )}
           <button
-            onClick={onBackToWriting}
+            onClick={exitReadingView}
             className="text-xs bg-academia-surface border border-academia-border text-academia-parchment px-3 py-1.5 rounded hover:border-academia-gold transition-all"
             aria-label="返回执笔模式"
           >
@@ -83,7 +89,7 @@ export default function ReadingView({
 
             if (actDrafts.length === 0) return null;
 
-            const actStat = stats.actStats[actIdx];
+            const actStat = stats?.actStats[actIdx];
 
             return (
               <section key={actIdx} className="space-y-8">
@@ -135,4 +141,4 @@ export default function ReadingView({
       </div>
     </div>
   );
-}
+});

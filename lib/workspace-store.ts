@@ -33,6 +33,7 @@ interface WorkspaceState {
   isReadingView: boolean;
   activeSceneId: string | null;
   draftsMap: Record<string, string>;
+  draftPresenceMap: Record<string, boolean>;
   isSavingDraft: boolean;
   isGeneratingScene: boolean;
   isTyping: boolean;
@@ -111,6 +112,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   isReadingView: false,
   activeSceneId: null,
   draftsMap: {},
+  draftPresenceMap: {},
   isSavingDraft: false,
   isGeneratingScene: false,
   isTyping: false,
@@ -235,7 +237,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setActiveScene: (sceneId) => set({ activeSceneId: sceneId }),
 
   updateDraft: (sceneId, content) =>
-    set((s) => ({ draftsMap: { ...s.draftsMap, [sceneId]: content } })),
+    set((s) => ({
+      draftsMap: { ...s.draftsMap, [sceneId]: content },
+      draftPresenceMap: { ...s.draftPresenceMap, [sceneId]: content.length > 0 },
+    })),
 
   setSceneWordCount: (count) => set({ sceneWordCount: count }),
 
@@ -332,12 +337,14 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     try {
       const drafts = await getDraftsByOutlineAction(project.id, current.id);
       const map: Record<string, string> = {};
+      const presence: Record<string, boolean> = {};
       drafts.forEach((d) => {
         map[d.sceneId] = d.content;
+        presence[d.sceneId] = d.content.length > 0;
       });
       const firstSceneId = outline.acts[0]?.scenes[0]?.id;
       if (firstSceneId) {
-        set({ isWritingMode: true, draftsMap: map, activeSceneId: firstSceneId });
+        set({ isWritingMode: true, draftsMap: map, draftPresenceMap: presence, activeSceneId: firstSceneId });
       }
     } catch {
       set({ error: '拉取正文记录失败' });
@@ -439,6 +446,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
               if (data.accumulated) {
                 set((s) => ({
                   draftsMap: { ...s.draftsMap, [activeSceneId]: data.accumulated },
+                  draftPresenceMap: { ...s.draftPresenceMap, [activeSceneId]: true },
                 }));
               }
               break;
@@ -450,6 +458,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
                 isTyping: false,
                 generatingPhase: 'done',
                 draftsMap: { ...get().draftsMap, [activeSceneId]: data.finalText },
+                draftPresenceMap: { ...get().draftPresenceMap, [activeSceneId]: true },
                 editorReview: data.editorReview ?? null,
               });
               break;
